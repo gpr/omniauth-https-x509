@@ -1,0 +1,24 @@
+= OmniAuth::HttpsX509
+
+OmniAuth strategy for APIs that have HTTPS client certificate enabled.
+
+I used omniauth-http-basic as example for starting this gem.
+
+== Installation
+
+Install manually or using Bundler:
+
+    gem 'omniauth-https-x509'
+
+Add :httpsx509 provider to omniauth builder:
+
+    use OmniAuth::Builder do
+      provider :httpsx509, "https://example.com/user_info"
+    end
+
+== Contributing
+
+This repository is managed using git-flow.
+
+== References
+
