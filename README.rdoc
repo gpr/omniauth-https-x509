@@ -1,24 +1,72 @@
 = OmniAuth::HttpsX509
 
-OmniAuth strategy for APIs that have HTTPS client certificate enabled.
+OmniAuth strategy for applications that have HTTPS client certificate verification enabled. The certificate will
+provide the user information.
+
+NOTE: This is a work in progress, you should wait for the first release before starting to use this gem. I'm pretty
+sure that there are a lot of mistake at this time :).
 
 I used omniauth-http-basic as example for starting this gem.
 
+== Pre-requisites
+
+I assume that you use an Apache server for deploying your application.
+
+== Architecture
+
+In this particular use case the authentication backend is provided by the https server that verifies the client
+certificate sent by the browser. There are two options, either the authentication is made for any path of the
+middleware or it is made in another location.
+
+This gem will address the first option; hence the request phase directly redirects to the callback url.
+
+That means also that any authentication error implies that the server does not respond to the request, hence the error
+cannot be treated at application level.
+
+If the authentication is successful the server normally responds and we just need to get the OmniAuth mandatory
+information from the certificate.
+
+Apache mod_ssl provides several environment variables for getting certificate info by enabling 'SSLOptions StdEnvVars'.
+But the documentation recommend to not enable this option for performance reason. Hence the uid will be retrieved
+by using globally the option 'SSLUserName' (that set the variable 'REMOTE_USER') and we will use the callback phase
+for retrieving the additional information from a specific location where 'SSLOptions StdEnvVars' will be set.
+
 == Installation
+
+=== Rails
 
 Install manually or using Bundler:
 
     gem 'omniauth-https-x509'
 
-Add :httpsx509 provider to omniauth builder:
+Add :httpsx509 provider to omniauth builder (config/initializers/omniauth.rb):
 
-    use OmniAuth::Builder do
-      provider :httpsx509, "https://example.com/user_info"
+    Rails.application.config.middleware.use OmniAuth::Builder do
+      provider :https_x509,
+               :setup => lambda{|env| env['omniauth.strategy'].options[:remote_user] = env['REMOTE_USER'] }
     end
+
+=== Apache
+
+    <Location /yourapp>
+        SSLVerifyClient require
+        SSLOptions -StdEnvVars -ExportCertData
+        SSLUserName SSL_CLIENT_S_DN_CN
+    </Location>
+
+    <Location /yourapp/auth/httpsx509/callback>
+        SSLOptions +StdEnvVars
+    </Location>
 
 == Contributing
 
 This repository is managed using git-flow.
 
 == References
+
+http://httpd.apache.org/docs/2.2/mod/mod_ssl.html
+
+https://github.com/intridea/omniauth
+
+https://github.com/janx/omniauth-http-basic
 
