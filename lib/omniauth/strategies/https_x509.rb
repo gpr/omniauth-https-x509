@@ -1,43 +1,36 @@
 # coding: utf-8
 require 'omniauth'
-require 'net/http'
 
 module OmniAuth
   module Strategies
     class HttpsX509
       include OmniAuth::Strategy
 
-      args [:endpoint]
+      option :remote_user, nil
 
-      option :title, "Https X509"
-      option :headers, {}
+      uid do
+        # With use ENV in development environment for emulating Apache StdEnv
+        ### TODO find a way for emulating SetEnv in Webrick
+        # To avoid certificate encoding issue we force the encoding to UTF-8
+        options.remote_user ? options.remote_user.force_encoding('UTF-8') : ENV['REMOTE_USER']
+      end
+
+      info do
+        @info
+      end
 
       def request_phase
+        # Authentication has already been done hence we directly redirect to callback phase
+        redirect callback_path
       end
 
       def callback_phase
-        return fail!(:invalid_credentials) if !x509_response
-        return fail!(:invalid_credentials) if x509_response.code.to_i >= 400
+        # Authentication failure cannot be treated in the application. Here we just need to retrieve the
+        # SSL environment variables.
+        # To avoid certificate encoding issue we force the encoding to UTF-8
+        @info = {name: request.env['SSL_CLIENT_S_DN_CN'].force_encoding('UTF-8'),
+                 email:  request.env['SSL_CLIENT_S_DN_Email'].force_encoding('UTF-8')}
         super
-      end
-
-      protected
-
-      # by default we use static uri. If dynamic uri is required, override
-      # this method.
-      def api_uri
-        options.endpoint
-      end
-
-      def x509_response
-        unless @x509_response
-          uri = URI(api_uri)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          req = Net::HTTP::Get.new(uri.request_uri)
-          @x509_response = http.request(req)
-        end
       end
     end
   end
