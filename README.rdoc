@@ -26,10 +26,16 @@ cannot be treated at application level.
 If the authentication is successful the server normally responds and we just need to get the OmniAuth mandatory
 information from the certificate.
 
-Apache mod_ssl provides several environment variables for getting certificate info by enabling 'SSLOptions StdEnvVars'.
+Apache mod_ssl provides several environment variables for getting certificate info by enabling 'SSLOptions +StdEnvVars'.
 But the documentation recommend to not enable this option for performance reason. Hence the uid will be retrieved
 by using globally the option 'SSLUserName' (that set the variable 'REMOTE_USER') and we will use the callback phase
-for retrieving the additional information from a specific location where 'SSLOptions StdEnvVars' will be set.
+for retrieving the additional information from a specific location where 'SSLOptions +StdEnvVars' will be set.
+
+=== Information Mapping
+
+uid:: SSL_CLIENT_S_DN
+name:: SSL_CLIENT_S_DN_CN
+email:: SSL_CLIENT_S_DN_Email
 
 == Installation
 
@@ -51,11 +57,11 @@ Add :httpsx509 provider to omniauth builder (config/initializers/omniauth.rb):
     <Location /yourapp>
         SSLVerifyClient require
         SSLOptions -StdEnvVars -ExportCertData
-        SSLUserName SSL_CLIENT_S_DN_CN
+        SSLUserName SSL_CLIENT_S_DN
     </Location>
 
     <Location /yourapp/auth/httpsx509/callback>
-        SSLOptions +StdEnvVars
+        SSLOptions +StdEnvVars -ExportCertData
     </Location>
 
 == Contributing
